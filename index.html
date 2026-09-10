@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Timesheet KNE - Kalkulator Lembur Otomatis">
+    <title>Timesheet KNE | Kalkulator Lembur</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        accent: '#3b82f6',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .input-modern { transition: all 0.2s; }
+        .input-modern:focus { transform: scale(1.02); }
+        .row-weekend { background: #fef3c7 !important; }
+        .row-holiday { background: #fee2e2 !important; }
+        .row-saturday { background: #dbeafe !important; }
+        .animate-fade { animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-white/10 backdrop-blur-lg border-b border-white/20 sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+                    K
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-lg leading-tight">Timesheet KNE</h1>
+                    <p class="text-slate-300 text-xs">Kalkulator Lembur Otomatis</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="exportCSV()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                    <i class="fas fa-file-csv"></i><span class="hidden sm:inline">Export</span>
+                </button>
+                <button onclick="window.print()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                    <i class="fas fa-print"></i><span class="hidden sm:inline">Print</span>
+                </button>
+                <button onclick="clearAllData()" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-2 rounded-lg text-sm transition">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Info Karyawan & Periode -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade">
+            <div class="bg-white rounded-2xl p-5 shadow-lg card-hover">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-user text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">KARYAWAN</p>
+                        <h3 class="font-bold text-slate-800">AHMAD ARJUNA</h3>
+                        <p class="text-xs text-slate-500">Z.109953 · N0 · PRODUCTION</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-lg card-hover">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-calendar-alt text-indigo-600 text-xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-500 font-medium">PERIODE AKTIF</p>
+                        <h3 class="font-bold text-slate-800" id="currentPeriod">-</h3>
+                        <p class="text-xs text-slate-500" id="daysRemaining">-</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="changePeriod(-1)" class="flex-1 bg-slate-100 hover:bg-slate-200 py-2 rounded-lg text-sm font-medium transition">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button onclick="changePeriod(1)" class="flex-1 bg-slate-100 hover:bg-slate-200 py-2 rounded-lg text-sm font-medium transition">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 shadow-lg card-hover text-white">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-clock text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-blue-100 font-medium">TOTAL LEMBUR</p>
+                        <h3 class="font-bold text-2xl" id="totalLMBHeader">0.0 <span class="text-sm font-normal">jam</span></h3>
+                    </div>
+                </div>
+                <div class="text-sm text-blue-100">
+                    <span id="totalEntryHeader">0</span> hari lembur · <span id="totalPayHeader">Rp 0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Form Input Cepat -->
+        <section class="bg-white rounded-2xl shadow-lg p-6 animate-fade no-print">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-edit text-blue-600"></i> Input Lembur
+                </h2>
+                <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium" id="selectedDateLabel">-</span>
+            </div>
+
+            <form id="overtimeForm" class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                <div class="col-span-2 md:col-span-1">
+                    <label class="text-xs font-semibold text-slate-600 mb-1 block">Tanggal</label>
+                    <input type="date" id="inputDate" required class="input-modern w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 mb-1 block">Shift</label>
+                    <select id="inputShift" required onchange="autoSetBreak()" class="input-modern w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option value="S1">S1 (Pagi)</option>
+                        <option value="S2">S2 (Malam)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 mb-1 block">Jam Masuk</label>
+                    <input type="time" id="inputTimeIn" value="06:15" required class="input-modern w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 mb-1 block">Jam Pulang</label>
+                    <input type="time" id="inputTimeOut" value="18:15" required class="input-modern w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 mb-1 block">Istirahat (mnt)</label>
+                    <input type="number" id="inputBreak" value="60" min="0" max="180" required class="input-modern w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-2 rounded-lg text-sm transition shadow-lg">
+                        <i class="fas fa-save mr-1"></i> Simpan
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
+                <i class="fas fa-info-circle mt-0.5"></i>
+                <span><strong>Info:</strong> Jumat Shift 1 → otomatis rest 120 menit (lembur 5.5). Sabtu = 5 jam normal. Minggu/Tanggal Merah = libur (2x/3x/4x).</span>
+            </div>
+        </section>
+
+        <!-- Timesheet Table -->
+        <section class="bg-white rounded-2xl shadow-lg overflow-hidden animate-fade">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                <h2 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-table text-indigo-600"></i> Timesheet Periode Ini
+                </h2>
+                <div class="flex gap-2 text-xs">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-100 rounded"></span> Sabtu</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-amber-100 rounded"></span> Minggu</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-100 rounded"></span> Libur</span>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs md:text-sm">
+                    <thead class="bg-slate-50 text-slate-600">
+                        <tr>
+                            <th class="px-2 py-3 text-left font-semibold">Tgl</th>
+                            <th class="px-2 py-3 text-left font-semibold">Hari</th>
+                            <th class="px-2 py-3 text-center font-semibold">Shift</th>
+                            <th class="px-2 py-3 text-center font-semibold">In</th>
+                            <th class="px-2 py-3 text-center font-semibold">Out</th>
+                            <th class="px-2 py-3 text-center font-semibold">Total</th>
+                            <th class="px-2 py-3 text-center font-semibold">Rest</th>
+                            <th class="px-2 py-3 text-center font-semibold">Efektif</th>
+                            <th class="px-2 py-3 text-center font-semibold">Normal</th>
+                            <th class="px-2 py-3 text-center font-semibold bg-blue-50">1.5x</th>
+                            <th class="px-2 py-3 text-center font-semibold bg-blue-50">2x</th>
+                            <th class="px-2 py-3 text-center font-semibold bg-blue-50">3x</th>
+                            <th class="px-2 py-3 text-center font-semibold bg-blue-50">4x</th>
+                            <th class="px-2 py-3 text-center font-semibold bg-indigo-100 text-indigo-700">LMB</th>
+                            <th class="px-2 py-3 text-left font-semibold">Ket</th>
+                            <th class="px-2 py-3 text-center font-semibold no-print">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timesheetBody" class="divide-y divide-slate-100">
+                        <!-- Auto-generated -->
+                    </tbody>
+                    <tfoot class="bg-slate-100 font-bold text-slate-800">
+                        <tr>
+                            <td colspan="9" class="px-3 py-3 text-right">TOTAL →</td>
+                            <td class="px-2 py-3 text-center bg-blue-50" id="sum1_5">0</td>
+                            <td class="px-2 py-3 text-center bg-blue-50" id="sum2">0</td>
+                            <td class="px-2 py-3 text-center bg-blue-50" id="sum3">0</td>
+                            <td class="px-2 py-3 text-center bg-blue-50" id="sum4">0</td>
+                            <td class="px-2 py-3 text-center bg-indigo-100 text-indigo-700 text-base" id="sumLMB">0</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+
+        <!-- Summary Cards -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade">
+            <div class="bg-white rounded-2xl p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-slate-500 font-medium">Hari Kerja</span>
+                    <i class="fas fa-briefcase text-blue-500"></i>
+                </div>
+                <p class="text-2xl font-bold text-slate-800" id="sumWorkDays">0</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-slate-500 font-medium">Sabtu</span>
+                    <i class="fas fa-calendar-day text-amber-500"></i>
+                </div>
+                <p class="text-2xl font-bold text-slate-800" id="sumSaturdays">0</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-slate-500 font-medium">Libur</span>
+                    <i class="fas fa-umbrella-beach text-red-500"></i>
+                </div>
+                <p class="text-2xl font-bold text-slate-800" id="sumHolidays">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-4 shadow-lg text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-emerald-100 font-medium">ULAP (Hari)</span>
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p class="text-2xl font-bold" id="sumUlap">0</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center text-slate-400 text-xs py-6 no-print">
+        <p>© 2026 Timesheet KNE · PT. KNE Indonesia · PWA Ready</p>
+    </footer>
+
+    <script>
+        // ============ KONFIGURASI ============
+        const EMPLOYEE = { name: 'AHMAD ARJUNA', nip: 'Z.109953', grade: 'N0', dept: 'PRODUCTION' };
+        const SALARY = 3500000; // Gaji pokok (untuk kalkulasi upah)
+        const HOURLY_RATE = SALARY / 173;
+        
+        // Tanggal merah 2026 (bisa ditambah)
+        const HOLIDAYS_2026 = [
+            '2026-01-01', '2026-02-17', '2026-03-20', '2026-04-03', '2026-05-01',
+            '2026-05-14', '2026-05-25', '2026-06-01', '2026-08-17', '2026-10-26',
+            '2026-12-25'
+        ];
+
+        let currentPeriodStart = null;
+        let timesheetData = {};
+
+        // ============ INISIALISASI ============
+        function init() {
+            loadData();
+            detectCurrentPeriod();
+            renderTimesheet();
+            updateSummary();
+        }
+
+        function detectCurrentPeriod() {
+            const today = new Date();
+            const day = today.getDate();
+            const month = today.getMonth();
+            const year = today.getFullYear();
+            
+            let startMonth, startYear;
+            if (day >= 16) {
+                // Periode: 16 bulan ini - 15 bulan depan
+                startMonth = month;
+                startYear = year;
+            } else {
+                // Periode: 16 bulan lalu - 15 bulan ini
+                startMonth = month - 1;
+                startYear = year;
+                if (startMonth < 0) { startMonth = 11; startYear--; }
+            }
+            
+            currentPeriodStart = new Date(startYear, startMonth, 16);
+            updatePeriodDisplay();
+        }
+
+        function updatePeriodDisplay() {
+            const end = new Date(currentPeriodStart);
+            end.setMonth(end.getMonth() + 1);
+            end.setDate(15);
+            
+            const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            const periodText = `16 ${months[currentPeriodStart.getMonth()]} ${currentPeriodStart.getFullYear()} - 15 ${months[end.getMonth()]} ${end.getFullYear()}`;
+            
+            document.getElementById('currentPeriod').textContent = periodText;
+            document.getElementById('selectedDateLabel').textContent = periodText;
+            
+            const daysLeft = Math.ceil((end - new Date()) / (1000*60*60*24));
+            document.getElementById('daysRemaining').textContent = daysLeft > 0 ? `${daysLeft} hari lagi` : 'Periode berakhir';
+            
+            document.getElementById('inputDate').valueAsDate = new Date();
+        }
+
+        function changePeriod(delta) {
+            currentPeriodStart.setMonth(currentPeriodStart.getMonth() + delta);
+            updatePeriodDisplay();
+            renderTimesheet();
+            updateSummary();
+        }
+
+        // ============ LOGIKA PERHITUNGAN ============
+        function autoSetBreak() {
+            const date = document.getElementById('inputDate').value;
+            const shift = document.getElementById('inputShift').value;
+            const breakInput = document.getElementById('inputBreak');
+            
+            if (!date) return;
+            const dateObj = new Date(date);
+            const isFridayS1 = dateObj.getDay() === 5 && shift === 'S1';
+            
+            if (isFridayS1) {
+                breakInput.value = 120;
+                breakInput.classList.add('bg-amber-100', 'border-amber-300');
+            } else {
+                breakInput.value = 60;
+                breakInput.classList.remove('bg-amber-100', 'border-amber-300');
+            }
+        }
+
+        document.getElementById('inputDate').addEventListener('change', autoSetBreak);
+        document.getElementById('inputShift').addEventListener('change', autoSetBreak);
+
+        function calculateOvertime(dateStr, timeIn, timeOut, breakMin, shift) {
+            const dateObj = new Date(dateStr);
+            const dayOfWeek = dateObj.getDay(); // 0=Minggu, 6=Sabtu
+            const isHoliday = HOLIDAYS_2026.includes(dateStr);
+            
+            const [h1, m1] = timeIn.split(':').map(Number);
+            const [h2, m2] = timeOut.split(':').map(Number);
+            let totalMin = (h2*60+m2) - (h1*60+m1);
+            if (totalMin < 0) totalMin += 24*60;
+            
+            const totalHours = totalMin / 60;
+            const breakHours = breakMin / 60;
+            const effectiveHours = totalHours - breakHours;
+            
+            let normalHours = 7;
+            if (isHoliday || dayOfWeek === 0) normalHours = 0;
+            else if (dayOfWeek === 6) normalHours = 5;
+            
+            const overtimeHours = Math.max(0, effectiveHours - normalHours);
+            
+            let ot1_5 = 0, ot2 = 0, ot3 = 0, ot4 = 0;
+            
+            if (isHoliday || dayOfWeek === 0) {
+                // Tanggal merah / Minggu
+                ot2 = Math.min(7, effectiveHours);
+                if (effectiveHours > 7) ot3 = Math.min(1, effectiveHours - 7);
+                if (effectiveHours > 8) { ot4 = effectiveHours - 8; ot3 = Math.max(0, 1 - (ot4 > 0 ? 0 : 0)); }
+            } else {
+                // Hari kerja
+                if (overtimeHours > 0) {
+                    ot1_5 = Math.min(1, overtimeHours);
+                    ot2 = Math.max(0, overtimeHours - 1);
+                }
+            }
+            
+            const totalLMB = (ot1_5 * 1.5) + (ot2 * 2) + (ot3 * 3) + (ot4 * 4);
+            const pay = (ot1_5*1.5 + ot2*2 + ot3*3 + ot4*4) * HOURLY_RATE;
+            
+            return {
+                totalHours: totalHours.toFixed(2),
+                breakHours: breakHours.toFixed(1),
+                effectiveHours: effectiveHours.toFixed(2),
+                normalHours: normalHours.toFixed(1),
+                ot1_5: ot1_5.toFixed(1), ot2: ot2.toFixed(1),
+                ot3: ot3.toFixed(1), ot4: ot4.toFixed(1),
+                totalLMB: totalLMB.toFixed(1),
+                pay: Math.round(pay),
+                dayOfWeek, isHoliday
+            };
+        }
+
+        // ============ RENDER TABLE ============
+        function renderTimesheet() {
+            const tbody = document.getElementById('timesheetBody');
+            tbody.innerHTML = '';
+            
+            const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            const shortDays = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+            
+            for (let i = 0; i < 31; i++) {
+                const date = new Date(currentPeriodStart);
+                date.setDate(date.getDate() + i);
+                
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = days[date.getDay()];
+                const shortDay = shortDays[date.getDay()];
+                const isHoliday = HOLIDAYS_2026.includes(dateStr);
+                const isSunday = date.getDay() === 0;
+                const isSaturday = date.getDay() === 6;
+                
+                const data = timesheetData[dateStr] || null;
+                
+                let rowClass = '';
+                let dayBadge = `<span class="font-medium">${shortDay}</span>`;
+                
+                if (isHoliday) {
+                    rowClass = 'row-holiday';
+                    dayBadge = `<span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">L</span>`;
+                } else if (isSunday) {
+                    rowClass = 'row-weekend';
+                    dayBadge = `<span class="bg-amber-400 text-white px-2 py-0.5 rounded text-xs font-bold">${shortDay}</span>`;
+                } else if (isSaturday) {
+                    rowClass = 'row-saturday';
+                    dayBadge = `<span class="bg-blue-400 text-white px-2 py-0.5 rounded text-xs font-bold">${shortDay}</span>`;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.className = `${rowClass} hover:bg-slate-50 transition`;
+                
+                if (data) {
+                    const isFridayS1 = date.getDay() === 5 && data.shift === 'S1';
+                    tr.innerHTML = `
+                        <td class="px-2 py-2 font-semibold">${date.getDate()}</td>
+                        <td class="px-2 py-2">${dayBadge}</td>
+                        <td class="px-2 py-2 text-center"><span class="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-bold">${data.shift}</span></td>
+                        <td class="px-2 py-2 text-center font-mono">${data.timeIn}</td>
+                        <td class="px-2 py-2 text-center font-mono">${data.timeOut}</td>
+                        <td class="px-2 py-2 text-center">${data.totalHours}</td>
+                        <td class="px-2 py-2 text-center">${data.breakHours}${isFridayS1 ? ' ⚠️' : ''}</td>
+                        <td class="px-2 py-2 text-center font-semibold">${data.effectiveHours}</td>
+                        <td class="px-2 py-2 text-center">${data.normalHours}</td>
+                        <td class="px-2 py-2 text-center bg-blue-50">${data.ot1_5}</td>
+                        <td class="px-2 py-2 text-center bg-blue-50">${data.ot2}</td>
+                        <td class="px-2 py-2 text-center bg-blue-50">${data.ot3}</td>
+                        <td class="px-2 py-2 text-center bg-blue-50">${data.ot4}</td>
+                        <td class="px-2 py-2 text-center bg-indigo-100 text-indigo-700 font-bold">${data.totalLMB}</td>
+                        <td class="px-2 py-2 text-xs">${data.keterangan || '-'}</td>
+                        <td class="px-2 py-2 text-center no-print">
+                            <button onclick="editRow('${dateStr}')" class="text-blue-600 hover:text-blue-800 mx-1"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteRow('${dateStr}')" class="text-red-600 hover:text-red-800 mx-1"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td class="px-2 py-2 font-semibold text-slate-400">${date.getDate()}</td>
+                        <td class="px-2 py-2">${dayBadge}</td>
+                        <td colspan="12" class="px-2 py-2 text-center text-slate-300 italic">Belum ada data</td>
+                        <td class="px-2 py-2 text-center no-print">
+                            <button onclick="quickFill('${dateStr}')" class="text-green-600 hover:text-green-800"><i class="fas fa-plus"></i></button>
+                        </td>
+                    `;
+                }
+                
+                tbody.appendChild(tr);
+            }
+            
+            updateTotals();
+        }
+
+        function quickFill(dateStr) {
+            document.getElementById('inputDate').value = dateStr;
+            autoSetBreak();
+            document.getElementById('inputDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function editRow(dateStr) {
+            const data = timesheetData[dateStr];
+            if (!data) return;
+            document.getElementById('inputDate').value = dateStr;
+            document.getElementById('inputShift').value = data.shift;
+            document.getElementById('inputTimeIn').value = data.timeIn;
+            document.getElementById('inputTimeOut').value = data.timeOut;
+            document.getElementById('inputBreak').value = Math.round(data.breakHours * 60);
+            autoSetBreak();
+            document.getElementById('inputDate').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function deleteRow(dateStr) {
+            if (confirm(`Hapus data tanggal ${dateStr}?`)) {
+                delete timesheetData[dateStr];
+                saveData();
+                renderTimesheet();
+                updateSummary();
+            }
+        }
+
+        // ============ FORM SUBMIT ============
+        document.getElementById('overtimeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const dateStr = document.getElementById('inputDate').value;
+            const shift = document.getElementById('inputShift').value;
+            const timeIn = document.getElementById('inputTimeIn').value;
+            const timeOut = document.getElementById('inputTimeOut').value;
+            const breakMin = parseInt(document.getElementById('inputBreak').value);
+            const keterangan = prompt('Keterangan (opsional):') || '';
+            
+            const calc = calculateOvertime(dateStr, timeIn, timeOut, breakMin, shift);
+            
+            timesheetData[dateStr] = {
+                date: dateStr, shift, timeIn, timeOut,
+                totalHours: calc.totalHours,
+                breakHours: calc.breakHours,
+                effectiveHours: calc.effectiveHours,
+                normalHours: calc.normalHours,
+                ot1_5: calc.ot1_5, ot2: calc.ot2,
+                ot3: calc.ot3, ot4: calc.ot4,
+                totalLMB: calc.totalLMB,
+                pay: calc.pay,
+                keterangan
+            };
+            
+            saveData();
+            renderTimesheet();
+            updateSummary();
+            
+            // Notifikasi sukses
+            showToast(`✅ Data ${dateStr} tersimpan! LMB: ${calc.totalLMB} jam`);
+        });
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-fade';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ============ UPDATE TOTALS ============
+        function updateTotals() {
+            let sum1_5=0, sum2=0, sum3=0, sum4=0, sumLMB=0;
+            Object.values(timesheetData).forEach(d => {
+                sum1_5 += parseFloat(d.ot1_5);
+                sum2 += parseFloat(d.ot2);
+                sum3 += parseFloat(d.ot3);
+                sum4 += parseFloat(d.ot4);
+                sumLMB += parseFloat(d.totalLMB);
+            });
+            
+            document.getElementById('sum1_5').textContent = sum1_5.toFixed(1);
+            document.getElementById('sum2').textContent = sum2.toFixed(1);
+            document.getElementById('sum3').textContent = sum3.toFixed(1);
+            document.getElementById('sum4').textContent = sum4.toFixed(1);
+            document.getElementById('sumLMB').textContent = sumLMB.toFixed(1);
+            
+            document.getElementById('totalLMBHeader').innerHTML = `${sumLMB.toFixed(1)} <span class="text-sm font-normal">jam</span>`;
+            document.getElementById('totalEntryHeader').textContent = Object.keys(timesheetData).length;
+            document.getElementById('totalPayHeader').textContent = 'Rp ' + Math.round(sumLMB * HOURLY_RATE * 2).toLocaleString('id-ID');
+        }
+
+        function updateSummary() {
+            let workDays=0, saturdays=0, holidays=0, ulap=0;
+            
+            for (let i = 0; i < 31; i++) {
+                const date = new Date(currentPeriodStart);
+                date.setDate(date.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                const day = date.getDay();
+                const isHoliday = HOLIDAYS_2026.includes(dateStr);
+                
+                if (isHoliday || day === 0) holidays++;
+                else if (day === 6) saturdays++;
+                else workDays++;
+                
+                if (timesheetData[dateStr] && parseFloat(timesheetData[dateStr].totalLMB) > 0) ulap++;
+            }
+            
+            document.getElementById('sumWorkDays').textContent = workDays;
+            document.getElementById('sumSaturdays').textContent = saturdays;
+            document.getElementById('sumHolidays').textContent = holidays;
+            document.getElementById('sumUlap').textContent = ulap;
+        }
+
+        // ============ LOCALSTORAGE ============
+        function saveData() {
+            localStorage.setItem('kne_timesheet_2026', JSON.stringify(timesheetData));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('kne_timesheet_2026');
+            if (saved) timesheetData = JSON.parse(saved);
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ Hapus SEMUA data timesheet? Tindakan ini tidak bisa dibatalkan!')) {
+                timesheetData = {};
+                saveData();
+                renderTimesheet();
+                updateSummary();
+                showToast('️ Semua data dihapus');
+            }
+        }
+
+        // ============ EXPORT CSV ============
+        function exportCSV() {
+            let csv = 'Tanggal,Hari,Shift,Jam Masuk,Jam Pulang,Total Jam,Istirahat,Efektif,Normal,1.5x,2x,3x,4x,Total LMB,Keterangan\n';
+            
+            const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            
+            Object.keys(timesheetData).sort().forEach(dateStr => {
+                const d = timesheetData[dateStr];
+                const dayName = days[new Date(dateStr).getDay()];
+                csv += `${dateStr},${dayName},${d.shift},${d.timeIn},${d.timeOut},${d.totalHours},${d.breakHours},${d.effectiveHours},${d.normalHours},${d.ot1_5},${d.ot2},${d.ot3},${d.ot4},${d.totalLMB},"${d.keterangan || ''}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `timesheet_kne_${currentPeriodStart.toISOString().split('T')[0]}.csv`;
+            a.click();
+            showToast('📥 CSV berhasil diunduh');
+        }
+
+        // ============ START ============
+        init();
+    </script>
+</body>
+</html>
